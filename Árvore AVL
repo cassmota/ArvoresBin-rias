@@ -1,0 +1,421 @@
+/**
+
+Terceiro Trabalho Prático – AEDII
+Setembro - 2010
+Tema: Árvores
+Problema: Índice baseado em Árvores de Busca (ou Árvores de Pesquisa)
+Faça um programa que leia um texto qualquer (arquivo no formato .txt) e imprima, em ordem
+alfabética, todas palavras com 3 ou mais caracteres e a linha na qual elas aparecem no texto.
+
+A leitura do arquivo deverá desprezar espaços em branco e sinais de pontuação, que serão
+considerados separadores de palavras. Além disso, a leitura deverá converter todas as letras
+maiúsculas em minúsculas. Você pode considerar que cada palavra contém no máximo 20 letras e
+que não haverá caracteres acentuados.
+Para isso, você deverá implementar uma Árvore AVL, onde cada nó irá armazenar uma palavra e
+uma lista de números das linhas onde ela aparece. A medida que as palavras são lidas, o seu
+algoritmo deve pesquisar a árvore para ver se a palavra já está presente. Se estiver, adiciona o novo
+número de linha à lista dessa palavra. Se não estiver presente, cria um novo nó na árvore e inicia a
+lista de linhas com esta. O uso da árvore AVL é indicado pois a sua estrutura será bastante dinâmica
+e no final você precisará imprimir as palavras em ordem alfabética.
+
+Autor: Cássio Rodolfo da Silva Mota
+RGM: 17351
+
+
+**/
+#include <iostream.h>//BiBlioteca
+#include <conio.h>//BiBlioteca
+#include <stdio.h>//BiBlioteca
+#include <fstream.h>//BiBlioteca
+#include <string.h>//BiBlioteca
+
+typedef struct no//Estrutura dos nós da Arvore
+{
+    int Ae, Ad;//Verificadores de Balanço
+    char cont[50];//variavel para guardar as linhas em que cada palavra esta
+    char palavra[20];//Variavel que armazena a palavra lida no arquivo
+    struct no *esq, *dir;
+};
+
+///Escopo de PROCEDIMENTOS
+void conta_linha(no *pt, int linha);///Procedimento que executa a contagem de linha, As linhas onde cada palavra esta
+void Busca(no *raiz, int &f, char *palavra, int linha);///Procedimento de Busca
+void remove(no *raiz);///Reove todos os nos da arvore quando finaliza o programa
+void escreve_no_arquivo(no *raiz, FILE *out);///Procedimento que escreve no arquivo
+
+no *aloca_no(no *pt, char *aux, int linha)//Alocando os nos
+{
+    char lin[3];
+        no *ptr;
+        ptr=new no;//Alocando o No
+        strcpy(ptr->cont," ");
+
+        itoa(linha, lin, 10);//Convertendo a linha para um char
+
+        strcpy(ptr->palavra,aux);//Inserindo a Palavra
+        ptr->Ae=0;//Inicializando as alturas
+        ptr->Ad=0;//Inicializando as alturas
+        //strcat(ptr->cont,", ");
+        strcat(ptr->cont,lin);//concatenando a linha
+        ptr->esq=NULL;//Inicializando pt->esq
+        ptr->dir=NULL;//Inicializando pt->dir
+        return ptr;//retornando o Nó inserido
+}
+no *rotacao_esq(no *raiz)//Rotacao para a esquerda
+{
+            no *aux1, *aux2;//Ponteiros auxiliares
+            aux1 = raiz->dir;//variavel aux1 recebe o no direito
+            aux2 = aux1->esq;//variavel aux2 recebe o no esquerdo
+            raiz->dir = aux2;//raiz direita recebe aux2
+            aux1->esq = raiz;//aux1->dir recebe raiz
+                            ///Rotação para a Esquerda Concluida
+
+            if (raiz->dir == NULL)///Atualixando as alturas dos Nós
+                raiz->Ad = 0;
+            else
+            {
+                if (raiz->dir->Ae > raiz->dir->Ad)
+                    raiz->Ad = raiz->dir->Ae + 1;
+                else
+                    raiz->Ad = raiz->dir->Ad + 1;
+            }
+                if (aux1->esq->Ae > aux1->esq->Ad)
+                    aux1->Ae = aux1->esq->Ae + 1;
+
+                else aux1->Ae = aux1->esq->Ad + 1;
+
+            return aux1;//Retornando o Nó
+}
+
+no *rotacao_dir(no *raiz)//Rotacao para direita
+{
+            no *aux1, *aux2;//Ponteiros auxiliares
+            aux1 = raiz->esq;//variavel aux1 recebe o no esquerdo
+            aux2 = aux1->dir;//variavel aux2 recebe o no direito
+            raiz->esq = aux2;//raiz esquerda recebe aux2
+            aux1->dir = raiz;//aux1->dir recebe raiz
+                        ///Rotação para a Direita Concluida
+
+            if (raiz->esq == NULL)///Atualixando as alturas dos Nós
+                raiz->Ae = 0;
+            else
+            {
+                if (raiz->esq->Ae > raiz->esq->Ad)
+                    raiz->Ae = raiz->esq->Ae + 1;
+                else
+                    raiz->Ae = raiz->esq->Ad + 1;
+            }
+
+            if (aux1->dir->Ae > aux1->dir->Ad)
+                aux1->Ad = aux1->dir->Ae + 1;
+            else
+                aux1->Ad = aux1->dir->Ad + 1;
+
+            return aux1;//Retornando o Nó
+}
+
+
+void Busca(no *raiz, int &f, char *palavra, int linha)//Procedimento de Busca
+{
+    no *pt, *pont;
+    pt=raiz;
+    //char lin[3];
+
+    if(pt==NULL)//raiz == NULL
+    {
+        f=0;
+    }
+    else
+    {
+
+
+            if(strcmp(palavra,pt->palavra)==0)//Palavra encontrada
+            {
+
+                conta_linha(pt, linha);//chamado ao procedimento que verifica as linhas
+                f=0;
+
+            }
+            else
+            {
+                    if(strcmp(palavra,pt->palavra)<0)//Palavra menor que a raiz
+                    {
+                        if(pt->esq==NULL)//se for NULL a palavra vai ser inserida na sub arvore esquerda
+                            f=2;
+                        else
+                        {
+                            pt=pt->esq;//se nao for NULL faz a busca na sub arvore esquerda
+                            Busca(pt, f, palavra, linha);
+                        }
+                    }
+                    else//se a palavtra for maior que a raiz busca na subarvore direita
+                    {
+                        if(pt->dir==NULL)//se for NULL inseri na sub arvore direita
+                            f=3;
+                        else//senao
+                        {
+
+                            Busca(pt->dir, f, palavra, linha);//faz a busca
+                            //raiz=pt;
+                        }
+                    }
+            }
+    }
+
+
+
+}
+void conta_linha(no *pt, int linha)//Procedimento que executa a contagem de linha, As linhas onde cada palavra esta
+{
+    char lin[3];
+
+        itoa(linha, lin, 10);//convertendo a linha para um char
+
+        strcat(pt->cont,", ");//Concatenando pt->cont com ", "
+
+        strcat(pt->cont,lin);//Concatenando pt->cont com a linha convertida para um char
+
+        //cout<<pt->palavra<<" "<<pt->cont<<" "<<linha<<endl;
+
+
+}
+
+no *inserir(no *&raiz, char *aux, int &f, int linha)//Procedimento para Inserção de nós na Arvore
+{
+        no *pt;
+        int bal;
+        pt=raiz;
+        char lin[3];//variavel auxiliar
+
+
+            //Busca(raiz, f, aux, linha);//Procedimento de Busca
+            if(raiz==NULL)//primeiro no a ser incerido
+            {
+                pt = aloca_no(pt, aux, linha);//Alocando o nó
+                raiz=pt;
+
+            }
+            else
+            {
+
+                Busca(pt, f, aux, linha);//Procedimento de Busca
+                    ///Caso o Elemento nao esteja na arvore o Busca retorna a posição Aonde ele dever ser inserido
+                    ///Sempre quando chama o Busca ele atualiza o ponteiro pt, retornando ele na posição exata para inserção
+                if(f!=0)//Elemento nao foi encontrado na Busca
+                {
+                        if(strcmp(aux,pt->palavra)<0)//Palavra menor que a raiz
+                        {
+                            f=0;//Inicializando novamente o f
+                            pt->esq=inserir(pt->esq, aux, f, linha);// Inserindo na sub-arvore esquerda "
+                           // cout<<"Inserindo na sub-arvore esquerda"<<endl;
+
+
+                            if (pt->esq->Ae > pt->esq->Ad)//Verificando as Alturas de cada no
+                                    pt->Ae = pt->esq->Ae + 1;
+                                else
+                                    pt->Ae = pt->esq->Ad + 1;;
+
+                                    bal = pt->Ad - pt->Ae;//Atualização do balanço
+
+                                        if(bal==2)//balanço = a 2
+                                        {
+                                                    if (pt->dir->Ad - pt->dir->Ae == 1)//diminuindo as alturas
+                                                    {
+                                                       // Rotação simples para esquerda"
+                                                      // cout << "\nRotação simples para esquerda";
+                                                        pt = rotacao_esq(pt);
+                                                    }
+                                                    else {//dupla rotaçao
+                                                           // Rotação Dupla
+
+                                                            pt->dir=rotacao_dir(pt->dir);//Primeiro uma rotação direita
+                                                            pt=rotacao_esq(pt);//depois uma rotação esquerda
+
+                                                          //  cout << "\nRotação Dupla Esquerda: ";
+
+                                                        }
+                                        }
+                                        if (bal == -2)//balanço = a -2
+                                        {
+                                                if (pt->esq->Ad - pt->esq->Ae == -1)//diminuindo as alturas
+                                                    {
+                                                       //Rotação simples para direita";
+                                                        pt = rotacao_dir(pt);
+                                                       // cout << "\nRotação simples para direita";
+                                                    }
+                                            else
+                                                {//rotacao dupla
+                                                        //\nRotação Dupla: ";
+
+
+                                                        pt->esq=rotacao_esq(pt->esq);//Primeiro uma rotação esquerda
+                                                        pt=rotacao_dir(pt);//depois uma rotação direita
+                                                        //cout << "\nRotação Dupla Direita: ";
+
+                                                }
+                                        }
+
+                        }
+                        else
+                        {
+                            f=0;//Inicializando novamente o f
+                            pt->dir=inserir(pt->dir, aux, f, linha);//Inserindo na sub-arvore direita
+                            //cout<<"Inserindo na sub-arvore direita"<<endl;
+
+
+                            if (pt->dir->Ae > pt->dir->Ad)//Verificando as Alturas de cada no
+                                pt->Ad = pt->dir->Ae + 1;
+                            else
+                                pt->Ad = pt->dir->Ad + 1;
+
+
+                                bal = pt->Ad - pt->Ae;//Atualização do balanço
+
+                            if (bal == 2)//balanço =2 nó desbalanceado
+                            {
+                                if (pt->dir->Ad - pt->dir->Ae == 1)
+                                {
+                                        //cout << "\nRotação simples para esquerda";
+                                       //  cout << "\nRotação simples para esquerda";
+                                        pt=rotacao_esq(pt);
+                                }
+                            else {
+                                    //Rotação Dupla
+                                  //  cout << "\nRotação Dupla Esquerda: ";
+                                    pt->dir=rotacao_dir(pt->dir);//Primeiro uma rotação direita
+                                    pt=rotacao_esq(pt);//depois uma rotação esquerda
+                                }
+                            }
+                            if (bal == -2)//balanço = -2 nó desbalanceado
+                            {
+                                if (pt->esq->Ad - pt->esq->Ae == -1)
+                                {
+                                    //Rotação simples para direita
+                                   // cout << "\nRotação simples para direita";
+                                    pt=rotacao_dir(pt);
+                                }
+                            else {
+                                //Rotação Dupla
+                                //cout << "\nRotação Dupla Direita: ";
+                                    pt->esq=rotacao_esq(pt->esq);//Primeiro uma rotação esquerda
+                                    pt=rotacao_dir(pt);//depois uma rotação direita
+                                }
+                            }
+
+
+                        }
+                }
+            }
+
+
+
+          return pt;//retornando o ponteiro inserido - Atualizado
+}
+
+void remove(no *raiz)//Reove todos os nos da arvore quando finaliza o programa
+{
+    no *pt;//ponteiro auxiliar
+    pt=raiz;//ponteiro auxiliar recebe a raiz da arvore
+
+    if(pt!=NULL)//percurso em pos-ordem
+    {
+            remove(pt->esq);//Percorrendo Sub-Arvore Esquerda
+            remove(pt->dir);//Percorrendo Sub-Arvore Direita
+
+            delete(pt);//Deletando os nós da Arvore
+    }
+}
+
+void imprimir(no *raiz)//Imprime os elementos da arvore
+{
+        no *pt;     //Procedimento que imprime na tela os valore dos nos da Arvore
+        pt=raiz;    //Procedimento nao utilizado efetivamente no programa
+
+        if(pt!=NULL)//percurso In-Ordem
+        {
+                imprimir(pt->esq);
+                cout<<endl<<"NO: "<<pt->palavra<<endl;
+                cout<<endl<<"Cont: "<<pt->cont<<endl;
+                imprimir(pt->dir);
+
+        }
+
+}
+
+void escreve_no_arquivo(no *raiz, FILE *out)//Procedimento que escreve no arquivo
+{
+
+    no *pt;//ponteiro auxiliar
+    pt=raiz;//ponteiro auxiliar recebe a raiz da arvore
+
+
+
+    if(pt!=NULL)//escrevendo com percurso In-Ordem
+    {
+
+        escreve_no_arquivo(pt->esq, out);//Percorrendo Sub-Arvore Esquerda
+        fprintf(out,"%s ", pt->palavra);//Ecrevendo
+        fprintf(out,"%s\n", pt->cont);//Ecrevendo
+        escreve_no_arquivo(pt->dir, out);//Percorrendo Sub-Arvore Direita
+
+    }
+
+}
+int main()
+{
+    no *raiz=NULL;//Raiz da arvore
+    FILE *arq;//ponteiro para o arquivo Entrada
+    FILE *out;//ponteiro para o arquivo saida
+    FILE *au;//ponteiro para o arquivo auxiliar
+    char aux[200], aux2[20];//Auxiliares
+
+    int f=0, linha=1, i;//Auxiliares
+
+    if((arq=fopen("Entrada.txt","r"))==NULL)//Abrindo arquivo para leitura
+    {
+            cout<<"Erro ao abri o Arquivo"<<endl;
+    }
+
+
+        while(!feof(arq))//Enquanto nao final do arquivo principal
+        {
+                fgets(aux, 200, arq);//Lendo a linha do arquivo Entrada
+
+                au=fopen("Out.txt","w+");//Criação de um arquivo Auxiliar
+                fprintf(au, "%s", aux);//Escrevendo a linha lida do arquivo entrada para o arquivo auxilar
+                fclose(au);////fechando arquivo
+
+                au=fopen("Out.txt","r");//Abrindo para leitura
+
+                //Ecrevendo a linha lido no arquivo auxilar fica mais facil controlar o total de linhas e aonde cada palavra vai esta
+                //incrementando a linha quando estiver terminado de ler o arquivo auxiliar
+
+                while(!feof(au))//enquanto nao final do arquivo auxiliar
+                {
+                    fscanf(au, "%s ", aux2);//Lendo palavra por palavra do arquivo auxiliar
+                    strlwr(aux2);//Convento para Minuscula
+                    raiz=inserir(raiz, aux2, f, linha);//Inserindo os nos da arvore
+                    f=0;
+
+                    //system("pause");
+                }
+                fclose(au);//fechando arquivo
+                linha++;//Incrementando a linha
+
+
+
+        }
+
+
+    out=fopen("Saida.txt","w");//criando o arquivo saida
+
+    escreve_no_arquivo(raiz, out);//Escrevendo no arquivo
+
+    //imprimir(raiz);//imprimindo no arquivo
+    remove(raiz);//removendo os nós
+    fclose(out);//fechando arquivo
+    fclose(arq);//fechando arquivo
+    remove("Out.txt");//Removendo o Arquivo auxiliar
+    cout<<endl<<endl<<"            >>>>>>>>>>PROGRAMA EXECUTADO COM EXITO<<<<<<<<<<<"<<endl<<endl;//Mensagem visualizada na Tela
+
+}
